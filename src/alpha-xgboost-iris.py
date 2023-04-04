@@ -1,24 +1,41 @@
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import xgboost as xgb
+import os
+
+import numpy as np
+from xgboost import XGBRegressor
 from pyspark.sql import SparkSession
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from dotenv import load_dotenv
+import pandas as pd
+
+# Load environment variables from .env file
+load_dotenv()
+EXTERNAL_ID = os.getenv("EXTERNAL_ID_FIELD_NAME")
 
 # initialize spark session
 spark = SparkSession.builder.appName('alpha-xgboost-iris').getOrCreate()
 
 iris_dataset = (spark.read
                 .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider")
-                .option("applicationDataTypeId", "4141")
-                .option("rootDAGContextId", "2348")
-                .option("structTypeId", "4142")
+                .option("applicationDataTypeId", os.getenv("APPLICATION_DATATYPE_ID"))
+                .option("rootDAGContextId", os.getenv("ROOT_DAG_CONTEXT_ID"))
+                .option("structTypeId", os.getenv("STRUCT_TYPE_ID"))
+                .option("authToken", os.getenv("AUTH_TOKEN"))
+                .option("baseUrl", os.getenv("BASE_URL"))
+                .option("wsBaseUrl", os.getenv("WS_BASE_URL"))
                 .load())
 
 # converting spark dataframe to pandas dataframe
 iris_dataset = iris_dataset.toPandas()
 
-iris_dataset = iris_dataset[["sepal_length_cm", "sepal_width_cm", "petal_length_cm", "petal_width_cm", "species"]]
+# make a copy of the original dataset (we will use it later for writing back to the object)
+original_dataset = iris_dataset.copy(deep=True)
+original_dataset_columns_x = [EXTERNAL_ID, "sepal_length_cm", "sepal_width_cm", "petal_length_cm", "petal_width_cm"]
+original_dataset_columns_y = ["species"]
+original_dataset_columns = original_dataset_columns_x + original_dataset_columns_y
+
+iris_dataset = iris_dataset[original_dataset_columns]
 
 # encode target labels with value starting from 0 and n_classes-1
 label_encoder = LabelEncoder()
@@ -30,10 +47,9 @@ iris_dataset['species'] = label_encoder.fit_transform(iris_dataset['species'])
 print(f'iris_dataset: \n{iris_dataset.head()}')
 
 # preparing data for training
-y = iris_dataset['species']
-# converting all columns to float (this is only essential if the input dataframe as some columns of type string)
-X = (iris_dataset.drop(['species'], axis=1)
-     .astype(float))
+iris_dataset_external_id = iris_dataset[EXTERNAL_ID]
+y = iris_dataset["species"]
+X = iris_dataset.drop(["species"], axis=1)
 
 # split data into train and test sets (20% for testing)
 x_train, x_test, y_train, y_test = train_test_split(X.values, y.values, test_size=0.2, random_state=42)
@@ -44,26 +60,14 @@ print(f'y_train (shape): {y_train.shape}')
 print(f'x_test (shape): {x_test.shape}')
 print(f'y_test (shape): {y_test.shape}')
 
-# convert data into xgb format
-train = xgb.DMatrix(x_train, label=y_train)
-test = xgb.DMatrix(x_test, label=y_test)
-
-# set xgboost parameters
-param = {
-    'max_depth': 3,
-    'eta': 0.3,
-    'objective': 'multi:softmax',
-    'num_class': 3
-}
-
-epochs = 5
-
 # Train the model
-model = xgb.train(param, train, epochs)
+model = XGBRegressor()
+model.fit(pd.DataFrame(data=x_train, columns=original_dataset_columns_x).drop(EXTERNAL_ID, axis=1).astype(float), y_train, verbose=False)
 
 # Predictions
-predictions = model.predict(test).astype(int)
-print(f'Predictions: {predictions}')
+predictions = model.predict(pd.DataFrame(data=x_test, columns=original_dataset_columns_x).drop(EXTERNAL_ID, axis=1).astype(float)).astype(int)
+final_data = np.hstack((x_test, predictions.reshape(-1, 1)))
+print(f'Predictions: \n{predictions}, \n{original_dataset.head()} \n{final_data}')
 
 # Calculate accuracy
 accuracy = accuracy_score(y_test, predictions)
