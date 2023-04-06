@@ -31,7 +31,7 @@ iris_dataset = iris_dataset.toPandas()
 
 # make a copy of the original dataset (we will use it later for writing back to the object)
 original_dataset = iris_dataset.copy(deep=True)
-original_dataset_columns_x = [EXTERNAL_ID, "sepal_length_cm", "sepal_width_cm", "petal_length_cm", "petal_width_cm"]
+original_dataset_columns_x = [EXTERNAL_ID, "is_deleted", "sepal_length_cm", "sepal_width_cm", "petal_length_cm", "petal_width_cm"]
 original_dataset_columns_y = ["species"]
 original_dataset_columns = original_dataset_columns_x + original_dataset_columns_y
 
@@ -72,3 +72,19 @@ print(f'Predictions: \n{predictions}, \n{original_dataset.head()} \n{final_data}
 # Calculate accuracy
 accuracy = accuracy_score(y_test, predictions)
 print(f'Accuracy: {accuracy}')
+
+# Write back to the object
+spark_dataset_to_write = spark.createDataFrame(final_data, original_dataset_columns)
+spark_dataset_to_write.show()
+
+spark_dataset_to_write.write \
+    .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
+    .option("applicationDataTypeId", os.getenv("APPLICATION_DATATYPE_ID")) \
+    .option("rootDAGContextId", os.getenv("ROOT_DAG_CONTEXT_ID")) \
+    .option("structTypeId", os.getenv("STRUCT_TYPE_ID")) \
+    .option("authToken", os.getenv("AUTH_TOKEN")) \
+    .option("baseUrl", os.getenv("BASE_URL")) \
+    .option("wsBaseUrl", os.getenv("WS_BASE_URL")) \
+    .option("readWriteMode", "write") \
+    .mode("append") \
+    .save()
