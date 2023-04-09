@@ -35,16 +35,16 @@ def predict():
 
 def write_prediction_to_app_object(final_data):
     # Write back to the object
+    print(f'All columns: \n{alpha_data.get_all_columns()}')
     spark_dataset_to_write = spark.createDataFrame(final_data, alpha_data.get_all_columns())
     spark_dataset_to_write.show()
     spark_dataset_to_write.write \
         .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
-        .option("applicationDataTypeId", os.getenv("APPLICATION_DATATYPE_ID")) \
-        .option("rootDAGContextId", os.getenv("ROOT_DAG_CONTEXT_ID")) \
-        .option("structTypeId", os.getenv("STRUCT_TYPE_ID")) \
-        .option("authToken", os.getenv("AUTH_TOKEN")) \
-        .option("baseUrl", os.getenv("BASE_URL")) \
-        .option("wsBaseUrl", os.getenv("WS_BASE_URL")) \
+        .option("applicationDataTypeName", os.getenv("APPLICATION")) \
+        .option("rootDAGContextName", os.getenv("APP_GROUP")) \
+        .option("structTypeName", os.getenv("APPLICATION_OBJECT")) \
+        .option("token", os.getenv("TOKEN")) \
+        .option("sessionString", os.getenv("SESSION_STRING")) \
         .option("readWriteMode", "write") \
         .mode("append") \
         .save()

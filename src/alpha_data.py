@@ -10,20 +10,30 @@ load_dotenv()
 EXTERNAL_ID = os.getenv("EXTERNAL_ID_FIELD_NAME")
 
 # initialize spark session
-spark = SparkSession.builder.appName('alpha-xgboost-iris').getOrCreate()
+spark = (SparkSession
+         .builder
+         .appName('alpha-xgboost-iris')
+         .getOrCreate())
+
+# Get all Spark properties
+all_properties = spark.sparkContext.getConf().getAll()
+
+# Print all properties
+for prop in all_properties:
+    print(f"{prop[0]} = {prop[1]}")
 
 
 def load_dataset_as_pandas_df():
+    print(f'SPARK: {os.environ["SPARK_HOME"]}')
     iris_dataset = (spark.read
                     .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider")
-                    .option("applicationDataTypeId", os.getenv("APPLICATION_DATATYPE_ID"))
-                    .option("rootDAGContextId", os.getenv("ROOT_DAG_CONTEXT_ID"))
-                    .option("structTypeId", os.getenv("STRUCT_TYPE_ID"))
-                    .option("authToken", os.getenv("AUTH_TOKEN"))
-                    .option("baseUrl", os.getenv("BASE_URL"))
-                    .option("wsBaseUrl", os.getenv("WS_BASE_URL"))
+                    .option("applicationDataTypeName", os.getenv("APPLICATION"))
+                    .option("rootDAGContextName", os.getenv("APP_GROUP"))
+                    .option("structTypeName", os.getenv("APPLICATION_OBJECT"))
+                    .option("token", os.getenv("TOKEN"))
+                    .option("sessionString", os.getenv("SESSION_STRING"))
                     .load())
-
+    print(f'iris_dataset: \n{iris_dataset.head()}')
     # converting spark dataframe to pandas dataframe
     iris_dataset = iris_dataset.toPandas()
     return iris_dataset
