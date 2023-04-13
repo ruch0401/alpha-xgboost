@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,6 +26,7 @@ for prop in all_properties:
 
 def load_dataset_as_pandas_df():
     print(f'SPARK: {os.environ["SPARK_HOME"]}')
+    read_start_time = datetime.now()
     iris_dataset = (spark.read
                     .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider")
                     .option("applicationDataTypeName", os.getenv("APPLICATION"))
@@ -33,6 +35,17 @@ def load_dataset_as_pandas_df():
                     .option("token", os.getenv("TOKEN"))
                     .option("sessionString", os.getenv("SESSION_STRING"))
                     .load())
+    print(f'iris_dataset: \n{iris_dataset.head()}')
+    read_end_time = datetime.now()
+    print(f'Total read time: {read_end_time - read_start_time}')
+    # converting spark dataframe to pandas dataframe
+    iris_dataset = iris_dataset.toPandas()
+    return iris_dataset
+
+
+def load_dataset_from_local_as_pandas_df():
+    print(f'SPARK: {os.environ["SPARK_HOME"]}')
+    iris_dataset = spark.read.format("csv").option("header", "true").load("iris.csv")
     print(f'iris_dataset: \n{iris_dataset.head()}')
     # converting spark dataframe to pandas dataframe
     iris_dataset = iris_dataset.toPandas()
