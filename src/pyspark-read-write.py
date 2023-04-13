@@ -40,7 +40,7 @@ def write_dataframe_to_local(df3):
 
 def write_dataframe_to_citta(df4):
     write_start_time = datetime.now()
-    limit = df4.limit(1)
+    limit = df4.limit(100000)
     df4.write \
         .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
         .option("applicationDataTypeName", os.getenv("APPLICATION")) \
@@ -77,13 +77,12 @@ def reorder_columns(df5):
 
 
 if __name__ == '__main__':
-    df = read_dataframe_from_citta()
-    print(f'Total records read: {df.count()}')
-    print(df.limit(10).show())
-    # df = read_csv_as_df()
-    # df = get_df_with_lowercase_cols(df)
-    # df = reorder_columns(df)
-    # df.show()
+    # df = read_dataframe_from_citta()
     # print(f'Total records read: {df.count()}')
-    write_dataframe_to_local(df)
+    df = read_csv_as_df()
+    df = get_df_with_lowercase_cols(df)
+    df = reorder_columns(df)
+    df.show()
+    print(f'Total records read: {df.count()}')
+    # write_dataframe_to_local(df)
     write_dataframe_to_citta(df)
