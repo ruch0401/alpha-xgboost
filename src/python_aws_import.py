@@ -41,7 +41,7 @@ def write_dataframe_to_local(df3):
 def write_dataframe_to_citta(df4):
     write_start_time = datetime.now()
     limit = df4.limit(1)
-    limit.write \
+    df4.write \
         .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
         .option("applicationDataTypeName", os.getenv("APPLICATION")) \
         .option("rootDAGContextName", os.getenv("APP_GROUP")) \
@@ -49,6 +49,7 @@ def write_dataframe_to_citta(df4):
         .option("token", os.getenv("TOKEN")) \
         .option("sessionString", os.getenv("SESSION_STRING")) \
         .option("readWriteMode", "write") \
+        .option("isExecuteValidationInParallel", "true") \
         .mode("append") \
         .save()
     write_end_time = datetime.now()
@@ -76,13 +77,13 @@ def reorder_columns(df5):
 
 
 if __name__ == '__main__':
-    # df = read_dataframe_from_citta()
-    # print(f'Total records read: {df.count()}')
-    # print(df.limit(10).show())
-    df = read_csv_as_df()
-    df = get_df_with_lowercase_cols(df)
-    df = reorder_columns(df)
-    df.show()
+    df = read_dataframe_from_citta()
     print(f'Total records read: {df.count()}')
-    # write_dataframe_to_local(df)
+    print(df.limit(10).show())
+    # df = read_csv_as_df()
+    # df = get_df_with_lowercase_cols(df)
+    # df = reorder_columns(df)
+    # df.show()
+    # print(f'Total records read: {df.count()}')
+    write_dataframe_to_local(df)
     write_dataframe_to_citta(df)
