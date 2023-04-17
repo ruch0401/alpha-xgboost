@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -6,24 +7,34 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import monotonically_increasing_id
 
-from visualization import visualize_as_grouped_bar
-
 # Load environment variables from .env file
 load_dotenv()
 
 spark = SparkSession.builder.appName("Spark Example to write data to Citta Object").getOrCreate()
+
 input_path = "file:///home/ruchit/Desktop/output.csv"
 output_path = "file:///home/ruchit/Desktop/testop"
 EXTERNAL_ID = os.getenv("EXTERNAL_ID_FIELD_NAME")
-columns = [EXTERNAL_ID, 'is_deleted', 'PRODUCT_ID', 'channel_id', 'market_id', 'customer_id', 'nrx',
+APPLICATION = os.getenv("APPLICATION")
+APPLICATION_GROUP = os.getenv("APP_GROUP")
+APPLICATION_OBJECT = os.getenv("APPLICATION_OBJECT")
+TOKEN = os.getenv("TOKEN")
+SESSION_STRING = os.getenv("SESSION_STRING")
+columns = ['is_deleted', 'PRODUCT_ID', 'channel_id', 'market_id', 'customer_id', 'nrx',
            'trx', 'factored_nrx', 'total_units', 'amount', 'custom_metric1', 'custom_metric2', 'custom_metric3',
            'custom_metric4', 'custom_metric5', 'custom_metric6', 'custom_metric7', 'custom_metric8', 'custom_metric9',
            'custom_metric10']
+is_external_id_col_required = True
+is_standard_object = False
 
 
 def read_csv_as_df():
     csv = spark.read.csv(input_path, header=True, inferSchema=True)
-    csv = csv.withColumn(EXTERNAL_ID, lit(monotonically_increasing_id()))
+    if is_external_id_col_required:
+        csv = csv.withColumn(EXTERNAL_ID, lit(monotonically_increasing_id()))
+    if is_standard_object:
+        col_name = os.getenv("APPLICATION_OBJECT") + "_id"
+        csv = csv.withColumn(col_name, lit(None).cast("double"))
     return csv
 
 
@@ -41,11 +52,11 @@ def read_dataframe_from_citta(records_to_read):
     read_start_time = datetime.now()
     data_frame = (spark.read
                   .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider")
-                  .option("applicationDataTypeName", os.getenv("APPLICATION"))
-                  .option("rootDAGContextName", os.getenv("APP_GROUP"))
-                  .option("structTypeName", os.getenv("APPLICATION_OBJECT"))
-                  .option("token", os.getenv("TOKEN"))
-                  .option("sessionString", os.getenv("SESSION_STRING"))
+                  .option("applicationDataTypeName", APPLICATION)
+                  .option("rootDAGContextName", APPLICATION_GROUP)
+                  .option("structTypeName", APPLICATION_OBJECT)
+                  .option("token", TOKEN)
+                  .option("sessionString", SESSION_STRING)
                   .load()
                   .limit(records_to_read))
     read_end_time = datetime.now()
@@ -59,11 +70,11 @@ def write_dataframe_to_citta(df4, records_to_write):
     limit = df4.limit(records_to_write)
     limit.write \
         .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
-        .option("applicationDataTypeName", os.getenv("APPLICATION")) \
-        .option("rootDAGContextName", os.getenv("APP_GROUP")) \
-        .option("structTypeName", os.getenv("APPLICATION_OBJECT")) \
-        .option("token", os.getenv("TOKEN")) \
-        .option("sessionString", os.getenv("SESSION_STRING")) \
+        .option("applicationDataTypeName", APPLICATION) \
+        .option("rootDAGContextName", APPLICATION_GROUP) \
+        .option("structTypeName", APPLICATION_OBJECT) \
+        .option("token", TOKEN) \
+        .option("sessionString", SESSION_STRING) \
         .option("readWriteMode", "write") \
         .option("isExecuteValidationInParallel", "true") \
         .mode("append") \
@@ -94,26 +105,37 @@ def test_read(records_to_read):
 
 
 if __name__ == '__main__':
-    data_volume = [10000, 20000]
-    frequency = [1, 5]
+    data_volume = [10]
+    frequency = [1]
 
-    read_times_store = []
-    write_times_store = []
+    print('System arguments passed to the code are: ', sys.argv)
 
-    for record_count in data_volume:
-        for freq in frequency:
+    if 'is_standard_object' in sys.argv:
+        is_standard_object = True
+        is_external_id_col_required = False
+        columns.insert(0, os.getenv('APPLICATION_OBJECT') + "_id")
+        print('Columns that will be used for computation: ', columns)
+
+    if 'is_standard_with_external_id' in sys.argv:
+        is_external_id_col_required = True
+        columns.insert(0, EXTERNAL_ID)
+        print('Columns that will be used for computation: ', columns)
+
+    if 'is_complete_snapshot_object' in sys.argv or 'is_incremental_snapshot_object' in sys.argv or 'is_bitemporal_object' in sys.argv or 'is_transactional_object' in sys.argv:
+        is_external_id_col_required = False
+
+    stats = {}
+    for freq in frequency:
+        for record_count in data_volume:
             for i in range(0, freq):
                 # we have to execute any operation for 'records' number of records, 'freq' number of times
-                print(f'Executing {record_count}, {i}th time')
+                print(f'Executing {record_count}, {i + 1}th time')
                 write_time = test_write(record_count)
                 df2, read_time = test_read(record_count)
                 df2.show(10)
-                read_times_store.append(read_time)
-                write_times_store.append(write_time)
+                entry = {'readTime': read_time, 'writeTime': write_time}
+                if (freq, record_count) not in stats:
+                    stats[(freq, record_count)] = []
+                stats[(freq, record_count)].append(entry)
 
-            print(f'Read times: {read_times_store}')
-            print(f'Write times: {write_times_store}')
-            visualize_as_grouped_bar(read_times_store, write_times_store, data_volume,
-                                     'Read Time', 'Write Time', 'Number of records',
-                                     'Time taken', f'Time taken to read and write {record_count} records with frequency {freq}',
-                                     freq)
+            print(f'Stats: {stats}')

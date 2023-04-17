@@ -21,8 +21,8 @@ def visualize_as_grouped_bar(y_data1, y_data2, x_data, y_data1_label, y_data2_la
     for bar1, bar2 in zip(bars1, bars2):
         height1 = bar1.get_height()
         height2 = bar2.get_height()
-        plt.text(bar1.get_x() + bar1.get_width() / 2, height1 - 0.7, f'{height1:.2f}', ha='center', va='bottom')
-        plt.text(bar2.get_x() + bar2.get_width() / 2, height2 - 0.7, f'{height2:.2f}', ha='center', va='bottom')
+        plt.text(bar1.get_x() + bar1.get_width() / 2, height1 - 1, f'{height1:.2f}', ha='center', va='bottom')
+        plt.text(bar2.get_x() + bar2.get_width() / 2, height2 - 1, f'{height2:.2f}', ha='center', va='bottom')
 
     plt.tight_layout()
     plt.legend()
