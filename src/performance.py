@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import monotonically_increasing_id
+from visualization import visualize_as_grouped_bar
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,6 +61,9 @@ def read_dataframe_from_citta(records_to_read):
                   .option("sessionString", SESSION_STRING)
                   .load()
                   .limit(records_to_read))
+    if data_frame.count() != records_to_read:
+        error = f"Data frame which was read does not have the expected number of records. The test has probably failed. Expected: {records_to_read}, found: {data_frame.count()}"
+        raise Exception(error)
     read_end_time = datetime.now()
     time_elapsed = read_end_time - read_start_time
     print(f'Total records read: {data_frame.count()}; Time taken to read: {time_elapsed}')
@@ -104,24 +109,33 @@ def test_read(records_to_read):
     return df, read_time
 
 
-if __name__ == '__main__':
-    data_volume = [10]
-    frequency = [1]
+def get_geom_series(first_number, geometric_ratio, number_of_elements):
+    series = []
+    for i in range(1, number_of_elements + 1):
+        series.append(first_number * geometric_ratio ** (i - 1))
+    return series
 
+
+if __name__ == '__main__':
+    factor = 10000
+    data_volume = [(i * factor) for i in get_geom_series(1, 2, 2)]
+    frequency = get_geom_series(1, 2, 3)
+
+    print(f"Data Volume: {data_volume}; Frequency: {frequency}")
     print('System arguments passed to the code are: ', sys.argv)
 
     if 'is_standard_object' in sys.argv:
         is_standard_object = True
         is_external_id_col_required = False
-        columns.insert(0, os.getenv('APPLICATION_OBJECT') + "_id")
+        columns.insert(0, APPLICATION_OBJECT + "_id")
         print('Columns that will be used for computation: ', columns)
 
-    if 'is_standard_with_external_id' in sys.argv:
+    if 'is_standard_with_external_id' in sys.argv or 'is_bitemporal_object' in sys.argv:
         is_external_id_col_required = True
         columns.insert(0, EXTERNAL_ID)
         print('Columns that will be used for computation: ', columns)
 
-    if 'is_complete_snapshot_object' in sys.argv or 'is_incremental_snapshot_object' in sys.argv or 'is_bitemporal_object' in sys.argv or 'is_transactional_object' in sys.argv:
+    if 'is_complete_snapshot_object' in sys.argv or 'is_incremental_snapshot_object' in sys.argv or 'is_transactional_object' in sys.argv:
         is_external_id_col_required = False
 
     stats = {}
@@ -137,5 +151,5 @@ if __name__ == '__main__':
                 if (freq, record_count) not in stats:
                     stats[(freq, record_count)] = []
                 stats[(freq, record_count)].append(entry)
-
-            print(f'Stats: {stats}')
+            print(f'The statistics are: {stats}')
+    visualize_as_grouped_bar(stats)
