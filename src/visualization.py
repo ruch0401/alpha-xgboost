@@ -3,6 +3,7 @@ import plotly.express as px
 
 
 def visualize_as_grouped_bar(data):
+    print(f"Plotting graph for data: {data}")
     df_list = []
     for key, values in data.items():
         for entry in values:
@@ -15,3 +16,8 @@ def visualize_as_grouped_bar(data):
     fig.show()
     fig.write_image(f'../output/graph.png')
     fig.write_html(f'../output/graph.html')
+
+
+def log_to_file(data):
+    with open('analytics.json', 'w') as f:
+        f.write(data)
