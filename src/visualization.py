@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+import json
 
 
 def visualize_as_grouped_bar(data):
@@ -19,5 +20,11 @@ def visualize_as_grouped_bar(data):
 
 
 def log_to_file(data):
-    with open('analytics.json', 'w') as f:
-        f.write(data)
+    with open('../output/analytics.json', 'w') as f:
+        f.write(str(data))
+
+
+if __name__ == '__main__':
+    data = {(1, 10): [{'readTime': 6.773444, 'writeTime': 20.550207}], (1, 20): [{'readTime': 7.221863, 'writeTime': 16.929979}], (2, 10): [{'readTime': 6.805896, 'writeTime': 16.926752}, {'readTime': 6.36243, 'writeTime': 16.348794}], (2, 20): [{'readTime': 7.012962, 'writeTime': 16.300162}, {'readTime': 7.07328, 'writeTime': 15.208348}]}
+    with open('../output/analytics.json', 'w') as f:
+        f.write(str(data))
