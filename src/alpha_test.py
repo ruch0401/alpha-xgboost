@@ -7,12 +7,9 @@ from pyspark.sql import SparkSession
 from sklearn.metrics import accuracy_score
 from xgboost import XGBRegressor
 from datetime import datetime
+from config import *
 
 import alpha_data
-
-# Load environment variables from .env file
-load_dotenv()
-EXTERNAL_ID = os.getenv("EXTERNAL_ID_FIELD_NAME")
 
 # initialize spark session
 spark = SparkSession.builder.appName('alpha-xgboost-iris').getOrCreate()
@@ -54,14 +51,18 @@ def write_prediction_to_app_object(final_data):
 
 def write_dataframe_to_citta(spark_dataset_to_write):
     write_start_time = datetime.now()
+    print(f'Writing records below:')
+    spark_dataset_to_write.show()
+    print(f'Attempting to write {spark_dataset_to_write.count()} records')
     spark_dataset_to_write.write \
         .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider") \
-        .option("applicationDataTypeName", os.getenv("APPLICATION")) \
-        .option("rootDAGContextName", os.getenv("APP_GROUP")) \
-        .option("structTypeName", os.getenv("APPLICATION_OBJECT")) \
-        .option("token", os.getenv("TOKEN")) \
-        .option("sessionString", os.getenv("SESSION_STRING")) \
+        .option("applicationDataTypeName", APPLICATION) \
+        .option("rootDAGContextName", APP_GROUP) \
+        .option("structTypeName", APPLICATION_OBJECT) \
+        .option("token", TOKEN) \
+        .option("sessionString", SESSION_STRING) \
         .option("readWriteMode", "write") \
+        .option("isExecuteValidationInParallel", "true") \
         .mode("append") \
         .save()
     write_end_time = datetime.now()

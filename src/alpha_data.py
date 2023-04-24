@@ -1,14 +1,13 @@
 import os
 
-from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from datetime import datetime
+from config import *
 
-# Load environment variables from .env file
-load_dotenv()
-EXTERNAL_ID = os.getenv("EXTERNAL_ID_FIELD_NAME")
+print(f'environment variables are: {os.environ}')
+print(f"the token is: {TOKEN}")
 
 # initialize spark session
 spark = (SparkSession
@@ -18,10 +17,13 @@ spark = (SparkSession
 
 # Get all Spark properties
 all_properties = spark.sparkContext.getConf().getAll()
+print(f'Count of all properties are: {len(all_properties)}')
 
 # Print all properties
-for prop in all_properties:
-    print(f"{prop[0]} = {prop[1]}")
+# for prop in all_properties:
+#     print(f"{prop[0]} = {prop[1]}")
+
+
 
 
 def load_dataset_as_pandas_df():
@@ -29,13 +31,14 @@ def load_dataset_as_pandas_df():
     read_start_time = datetime.now()
     iris_dataset = (spark.read
                     .format("cloud.alpha.spark.providers.appobject.AppObjectTableProvider")
-                    .option("applicationDataTypeName", os.getenv("APPLICATION"))
-                    .option("rootDAGContextName", os.getenv("APP_GROUP"))
-                    .option("structTypeName", os.getenv("APPLICATION_OBJECT"))
-                    .option("token", os.getenv("TOKEN"))
-                    .option("sessionString", os.getenv("SESSION_STRING"))
+                    .option("applicationDataTypeName", APPLICATION)
+                    .option("rootDAGContextName", APP_GROUP)
+                    .option("structTypeName", APPLICATION_OBJECT)
+                    .option("token", TOKEN)
+                    .option("sessionString", SESSION_STRING)
                     .load())
-    print(f'iris_dataset: \n{iris_dataset.head()}')
+    print(f'iris_dataset in alpha_data: {iris_dataset}')
+    print(f'iris_dataset.count(): {iris_dataset.count()}')
     read_end_time = datetime.now()
     print(f'Total read time: {read_end_time - read_start_time}')
     # converting spark dataframe to pandas dataframe
@@ -44,7 +47,7 @@ def load_dataset_as_pandas_df():
 
 
 def load_dataset_from_local_as_pandas_df():
-    print(f'SPARK: {os.environ["SPARK_HOME"]}')
+    # print(f'SPARK: {os.environ["SPARK_HOME"]}')
     iris_dataset = spark.read.format("csv").option("header", "true").load("iris.csv")
     print(f'iris_dataset: \n{iris_dataset.head()}')
     # converting spark dataframe to pandas dataframe
