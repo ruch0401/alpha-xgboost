@@ -1,9 +1,10 @@
 import os
+from datetime import datetime
 
 from pyspark.sql import SparkSession
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from datetime import datetime
+
 from config import *
 
 print(f'environment variables are: {os.environ}')
@@ -19,11 +20,10 @@ spark = (SparkSession
 all_properties = spark.sparkContext.getConf().getAll()
 print(f'Count of all properties are: {len(all_properties)}')
 
+
 # Print all properties
 # for prop in all_properties:
 #     print(f"{prop[0]} = {prop[1]}")
-
-
 
 
 def load_dataset_as_pandas_df():

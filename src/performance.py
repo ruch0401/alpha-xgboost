@@ -1,13 +1,12 @@
 import os
-import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import monotonically_increasing_id
-from visualization import *
 
+from visualization import *
 
 # Load environment variables from .env file
 load_dotenv()

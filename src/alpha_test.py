@@ -1,15 +1,13 @@
-import os
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from sklearn.metrics import accuracy_score
 from xgboost import XGBRegressor
-from datetime import datetime
-from config import *
 
 import alpha_data
+from config import *
 
 # initialize spark session
 spark = SparkSession.builder.appName('alpha-xgboost-iris').getOrCreate()
