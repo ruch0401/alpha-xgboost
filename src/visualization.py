@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import sys
+import boto3
 
 
 def visualize_as_grouped_bar(data):
@@ -27,15 +28,15 @@ def log_to_file(data):
 def get_suffix():
     suffix = ''
     if 'is_standard_object' in sys.argv:
-        suffix = '_standard_object'
+        suffix = 'standard_object'
     if 'is_standard_with_external_id' in sys.argv:
-        suffix = '_standard_with_external_id'
+        suffix = 'standard_with_external_id'
     if 'is_bitemporal_object' in sys.argv:
-        suffix = '_bitemporal_object'
+        suffix = 'bitemporal_object'
     if 'is_complete_snapshot_object' in sys.argv:
-        suffix = '_complete_snapshot_object'
+        suffix = 'complete_snapshot_object'
     if 'is_incremental_snapshot_object' in sys.argv:
-        suffix = '_incremental_snapshot_object'
+        suffix = 'incremental_snapshot_object'
     if 'is_transactional_object' in sys.argv:
-        suffix = '_transactional_object'
+        suffix = 'transactional_object'
     return suffix
