@@ -1,7 +1,6 @@
 import pandas as pd
 import plotly.express as px
 import sys
-import boto3
 
 
 def visualize_as_grouped_bar(data):
