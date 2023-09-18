@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import monotonically_increasing_id
-from visualization import visualize_as_grouped_bar
+from visualization import *
 
 
 # Load environment variables from .env file
@@ -152,4 +152,5 @@ if __name__ == '__main__':
                     stats[(freq, record_count)] = []
                 stats[(freq, record_count)].append(entry)
             print(f'The statistics are: {stats}')
+    log_to_file(stats)
     visualize_as_grouped_bar(stats)
