@@ -1,14 +1,19 @@
+import configparser
 import os
 import sys
+from enum import Enum
 
 import pandas as pd
 
-# source_file_path = os.path.join("file://", desktop_path, "output.csv")
 source_file_path = "file:///home/ruchit/Desktop/output.csv"
-resources_root = '../output'
+output_root = '../output'
 
 # Suppress SettingWithCopyWarning
 pd.options.mode.chained_assignment = None  # 'None' means no warnings will be shown
+config = configparser.ConfigParser()
+config.read('../resources/config.ini')
+
+global object_type, object_name, records_per_file, total_files, inserts, updates, part_of_candidate_key
 
 
 class CSVGeneratorParams:
@@ -19,6 +24,17 @@ class CSVGeneratorParams:
         self.records_per_file = records_per_file
         self.inserts = inserts
         self.updates = updates
+
+
+class ObjectType(Enum):
+    STANDARD = 'is_standard'
+    STANDARD_WITH_EXTERNAL_ID = 'standard_with_external_id'
+    STANDARD_BITEMPORAL = 'standard_bitemporal'
+    VERSIONED_BITEMPORAL = 'versioned_bitemporal'
+    STANDARD_TRANSACTIONAL = 'standard_transactional'
+    VERSIONED_TRANSACTIONAL = 'versioned_transactional'
+    COMPLETE_SNAPSHOT = 'complete_snapshot'
+    INCREMENTAL_SNAPSHOT = 'incremental_snapshot'
 
 
 def write_df_to_resources(final_df, path):
@@ -67,7 +83,8 @@ def generate_csv(params: CSVGeneratorParams):
                 required_rows_inserts[internal_id_col_name] = required_rows_inserts[internal_id_col_name].apply(
                     lambda x: x.replace(x, ''))
                 required_rows_updates.rename(columns={external_id_col_name: internal_id_col_name}, inplace=True)
-                required_rows_updates[internal_id_col_name] = required_rows_updates[internal_id_col_name].str.split('_').str[1]
+                required_rows_updates[internal_id_col_name] = \
+                    required_rows_updates[internal_id_col_name].str.split('_').str[1]
 
             if is_external_id_required():
                 print('Default code path which handles the external_id case is being executed')
@@ -91,7 +108,7 @@ def generate_csv(params: CSVGeneratorParams):
             else:
                 final_df = pd.concat([required_rows_inserts, required_rows_updates], axis=0)
 
-            write_df_to_resources(final_df, f'{resources_root}/{params.object_name}_{params.records_per_file}_{i}.csv')
+            write_df_to_resources(final_df, f'{output_root}/{params.object_name}_{params.records_per_file}_{i}.csv')
 
 
 def generate_file_with_seed_data(df, external_ids, params):
@@ -106,76 +123,49 @@ def generate_file_with_seed_data(df, external_ids, params):
         print('Default code path which handles the external_id case is being executed')
     if is_conditional_key_required():
         df = df.remove(columns=[external_id_col_name])
-    write_df_to_resources(df, f'{resources_root}/{params.object_name}_base.csv')
+    write_df_to_resources(df, f'{output_root}/{params.object_name}_base.csv')
 
 
 def is_internal_id_required():
-    return 'is_standard' in sys.argv
+    return object_type == ObjectType.STANDARD
 
 
 def is_external_id_required():
-    return ('is_standard_with_external_id' in sys.argv
-            or 'is_standard_bitemporal' in sys.argv
-            or 'is_versioned_bitemporal' in sys.argv)
+    return (object_type == ObjectType.STANDARD_WITH_EXTERNAL_ID
+            or object_type == ObjectType.STANDARD_BITEMPORAL
+            or object_type == ObjectType.VERSIONED_BITEMPORAL)
 
 
 def is_conditional_key_required():
-    return ('is_standard_transactional' in sys.argv
-            or 'is_versioned_transactional' in sys.argv
-            or 'is_complete_snapshot' in sys.argv
-            or 'is_incremental_snapshot' in sys.argv)
+    return (object_type == ObjectType.STANDARD_TRANSACTIONAL
+            or object_type == ObjectType.VERSIONED_TRANSACTIONAL
+            or object_type == ObjectType.COMPLETE_SNAPSHOT
+            or object_type == ObjectType.INCREMENTAL_SNAPSHOT)
 
 
-def parse_command_line():
-    global object_name, records_per_file, total_files, inserts, updates, part_of_candidate_key
-    if 'object_name' not in sys.argv:
-        print('Object name is required in the system arguments')
+def init_and_parse_config():
+    global object_type, object_name, total_files, records_per_file, inserts, updates, part_of_candidate_key
+    object_type = config['default'].get('object_type', '')
+    object_name = config['default'].get('object_name', '')
+    total_files = int(config['default'].get('total_files', '0'))
+    records_per_file = int(config['default'].get('records_per_file', '0'))
+    inserts = int(config['default'].get('inserts', '0'))
+    updates = int(config['default'].get('updates', '0'))
+    part_of_candidate_key = config['default'].get('part_of_candidate_key', '')
+
+    if object_type == '' or object_name == '' or total_files == 0 or records_per_file == 0 or inserts == 0 or updates == 0:
+        print('All the parameters are required in the config.ini file')
         sys.exit(1)
-    else:
-        object_name = sys.argv[sys.argv.index('object_name') + 1]
-
-    if 'total_files' not in sys.argv:
-        print('Total files is required in the system arguments')
-        sys.exit(1)
-    else:
-        total_files = int(sys.argv[sys.argv.index('total_files') + 1])
-
-    if 'records_per_file' not in sys.argv:
-        print('Records per file is required in the system arguments')
-        sys.exit(1)
-    else:
-        records_per_file = int(sys.argv[sys.argv.index('records_per_file') + 1])
-
-    if 'inserts' not in sys.argv:
-        print('Inserts is required in the system arguments')
-        sys.exit(1)
-    else:
-        inserts = int(sys.argv[sys.argv.index('inserts') + 1])
-
-    if 'updates' not in sys.argv:
-        print('Updates is required in the system arguments')
-        sys.exit(1)
-    else:
-        updates = int(sys.argv[sys.argv.index('updates') + 1])
 
     if is_conditional_key_required():
-        if 'part_of_candidate_key' not in sys.argv:
-            print('part_of_candidate_key is required in the system arguments when the object type is set to transactional or snapshot')
+        if part_of_candidate_key == '':
+            print(
+                'part_of_candidate_key is required in the system arguments when the object type is set to transactional or snapshot')
             sys.exit(1)
-        part_of_candidate_key = sys.argv[sys.argv.index('part_of_candidate_key') + 1]
 
 
 if __name__ == '__main__':
-    print('System arguments passed to the code are: ', sys.argv)
-
-    object_name = None
-    total_files = None
-    records_per_file = None
-    inserts = None
-    updates = None
-    part_of_candidate_key = None
-
-    parse_command_line()
+    init_and_parse_config()
     generate_csv(
         CSVGeneratorParams(object_name, total_files, records_per_file, inserts, updates, part_of_candidate_key))
 
