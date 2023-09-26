@@ -27,7 +27,7 @@ class CSVGeneratorParams:
 
 
 class ObjectType(Enum):
-    STANDARD = 'is_standard'
+    STANDARD = 'standard'
     STANDARD_WITH_EXTERNAL_ID = 'standard_with_external_id'
     STANDARD_BITEMPORAL = 'standard_bitemporal'
     VERSIONED_BITEMPORAL = 'versioned_bitemporal'
@@ -90,15 +90,15 @@ def generate_csv(params: CSVGeneratorParams):
                 print('Default code path which handles the external_id case is being executed')
 
             if is_conditional_key_required():
-                required_rows_inserts = required_rows_inserts.remove(columns=[external_id_col_name])
-                required_rows_updates = required_rows_updates.remove(columns=[external_id_col_name])
+                required_rows_inserts = required_rows_inserts.drop(external_id_col_name, axis=1)
+                required_rows_updates = required_rows_updates.drop(external_id_col_name, axis=1)
                 # all the candidate keys will have to be changed to simulate inserts
                 candidate_keys = params.part_of_candidate_key.split(',')
                 for key in candidate_keys:
-                    required_rows_inserts[key] = required_rows_inserts[key].apply(lambda x: x + str(i + 1))
+                    required_rows_inserts[key] = required_rows_inserts[key].apply(lambda x: x + 1)
 
                 # one of the other columns, lets say the 'amount' column will have to be changed to simulate updates, keeping the candidate keys same
-                required_rows_updates['amount'] = required_rows_updates['amount'].apply(lambda x: int(x) + 1)
+                required_rows_updates['AMOUNT'] = required_rows_updates['AMOUNT'].apply(lambda x: x + 1)
 
             global final_df
             if params.inserts == 0:
@@ -117,44 +117,49 @@ def generate_file_with_seed_data(df, external_ids, params):
     df = df[df[external_id_col_name].isin(external_ids[:params.records_per_file])]
     if is_internal_id_required():
         df.rename(columns={external_id_col_name: internal_id_col_name}, inplace=True)
-        df[internal_id_col_name] = df[internal_id_col_name].apply(lambda x: x.replace(x,
-                                                                                      ''))  # since internal_id is auto-generated, we need to remove the values from the first file
+        # since internal_id is auto-generated, we need to remove the values from the first file
+        df[internal_id_col_name] = df[internal_id_col_name].apply(lambda x: x.replace(x, ''))
     if is_external_id_required():
         print('Default code path which handles the external_id case is being executed')
+
     if is_conditional_key_required():
-        df = df.remove(columns=[external_id_col_name])
+        df = df.drop(external_id_col_name, axis=1)
     write_df_to_resources(df, f'{output_root}/{params.object_name}_base.csv')
 
 
 def is_internal_id_required():
-    return object_type == ObjectType.STANDARD
+    return object_type == ObjectType.STANDARD.value
 
 
 def is_external_id_required():
-    return (object_type == ObjectType.STANDARD_WITH_EXTERNAL_ID
-            or object_type == ObjectType.STANDARD_BITEMPORAL
-            or object_type == ObjectType.VERSIONED_BITEMPORAL)
+    return (object_type == ObjectType.STANDARD_WITH_EXTERNAL_ID.value
+            or object_type == ObjectType.STANDARD_BITEMPORAL.value
+            or object_type == ObjectType.VERSIONED_BITEMPORAL.value)
 
 
 def is_conditional_key_required():
-    return (object_type == ObjectType.STANDARD_TRANSACTIONAL
-            or object_type == ObjectType.VERSIONED_TRANSACTIONAL
-            or object_type == ObjectType.COMPLETE_SNAPSHOT
-            or object_type == ObjectType.INCREMENTAL_SNAPSHOT)
+    return (object_type == ObjectType.STANDARD_TRANSACTIONAL.value
+            or object_type == ObjectType.VERSIONED_TRANSACTIONAL.value
+            or object_type == ObjectType.COMPLETE_SNAPSHOT.value
+            or object_type == ObjectType.INCREMENTAL_SNAPSHOT.value)
 
 
 def init_and_parse_config():
     global object_type, object_name, total_files, records_per_file, inserts, updates, part_of_candidate_key
     object_type = config['default'].get('object_type', '')
     object_name = config['default'].get('object_name', '')
-    total_files = int(config['default'].get('total_files', '0'))
-    records_per_file = int(config['default'].get('records_per_file', '0'))
-    inserts = int(config['default'].get('inserts', '0'))
-    updates = int(config['default'].get('updates', '0'))
+    total_files = int(config['default'].get('total_files', '-1'))
+    records_per_file = int(config['default'].get('records_per_file', '-1'))
+    inserts = int(config['default'].get('inserts', '-1'))
+    updates = int(config['default'].get('updates', '-1'))
     part_of_candidate_key = config['default'].get('part_of_candidate_key', '')
 
-    if object_type == '' or object_name == '' or total_files == 0 or records_per_file == 0 or inserts == 0 or updates == 0:
+    if object_type == '' or object_name == '' or total_files == -1 or records_per_file == -1 or inserts == -1 or updates == -1:
         print('All the parameters are required in the config.ini file')
+        sys.exit(1)
+
+    if inserts + updates != records_per_file:
+        print('Sum of inserts and updates should be equal to records_per_file')
         sys.exit(1)
 
     if is_conditional_key_required():
