@@ -124,7 +124,7 @@ def generate_file_with_seed_data(df, external_ids, params):
 
     if is_conditional_key_required():
         df = df.drop(external_id_col_name, axis=1)
-    write_df_to_resources(df, f'{output_root}/{params.object_name}_{params.object_name}_0.csv')
+    write_df_to_resources(df, f'{output_root}/{params.object_name}_{params.records_per_file}_0.csv')
 
 
 def is_internal_id_required():
