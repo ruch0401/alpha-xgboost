@@ -2,10 +2,10 @@ import configparser
 import os
 import sys
 from enum import Enum
+import random
 
 import pandas as pd
 
-source_file_path = "file:///home/ruchit/Desktop/output.csv"
 output_root = '../output'
 
 # Suppress SettingWithCopyWarning
@@ -45,17 +45,24 @@ def write_df_to_resources(final_df, path):
 
 def generate_csv(params: CSVGeneratorParams):
     print('Starting CSV file generation')
+    max_pool_size_required = params.total_files * params.records_per_file
 
-    print('Reading source file')
-    df = pd.read_csv(source_file_path)
+    print('Generating source dataframe')
+    # df = pd.read_csv(source_file_path)
+    df = generate_source_dataframe(max_pool_size_required)
     print(f'Source file has {len(df)} records')
 
     internal_id_col_name = params.object_name + "_id"
     external_id_col_name = params.object_name + "_external_id"
-    external_ids = [f'ext_{i}' for i in range(1, 10000000 + 1)]
-    max_pool_size_required = params.total_files * params.records_per_file
+    external_ids = [f'ext_{i}' for i in range(1, max_pool_size_required + 1)]
+
     df[external_id_col_name] = external_ids
     df = df.head(max_pool_size_required)
+
+    if len(df) < max_pool_size_required:
+        print(f'An error occurred while generating the source dataframe. Source dataframe should have had same number of records as the max pool size required')
+        sys.exit(1)
+
     print(f'Selected {len(df)} records from the source file')
     global start_index_for_inserts, end_index_for_inserts, start_index_for_updates, end_index_for_updates
     for i in range(0, params.total_files):
@@ -144,6 +151,10 @@ def is_conditional_key_required():
             or object_type == ObjectType.INCREMENTAL_SNAPSHOT.value)
 
 
+def get_random_number(start, end):
+    return random.randint(start, end)
+
+
 def init_and_parse_config():
     global object_type, object_name, total_files, records_per_file, inserts, updates, part_of_candidate_key
     object_type = config['default'].get('object_type', '')
@@ -167,6 +178,35 @@ def init_and_parse_config():
             print(
                 'part_of_candidate_key is required in the system arguments when the object type is set to transactional or snapshot')
             sys.exit(1)
+
+
+def generate_source_dataframe(records):
+    data = {
+        "PRODUCT_ID": [f'PRD_{get_random_number(100, 100000)}' for i in range(0, records)],
+        "CHANNEL_ID": [f'CHN_{get_random_number(1, 10)}' for i in range(0, records)],
+        "MARKET_ID": [f'MKT_{get_random_number(1, 10)}' for i in range(0, records)],
+        "CUSTOMER_ID": [f'CUS_{get_random_number(100, 100000)}' for i in range(0, records)],
+        "NRX": [get_random_number(100, 1000) for i in range(0, records)],
+        "TRX": [get_random_number(100, 1000) for i in range(0, records)],
+        "FACTORED_NRX": [get_random_number(100, 1000) for i in range(0, records)],
+        "FACTORED_TRX": [get_random_number(100, 1000) for i in range(0, records)],
+        "TOTAL_UNITS": [get_random_number(100, 1000) for i in range(0, records)],
+        "TOTAL_AMOUNT": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC1": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC2": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC3": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC4": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC5": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC6": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC7": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC8": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC9": [get_random_number(100, 1000) for i in range(0, records)],
+        "CUSTOM_METRIC10": [get_random_number(100, 1000) for i in range(0, records)],
+        "IS_DELETED": ['FALSE' for i in range(0, records)],
+    }
+    df = pd.DataFrame(data)
+    print(df.head())
+    return df
 
 
 if __name__ == '__main__':
