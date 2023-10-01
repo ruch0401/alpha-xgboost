@@ -105,7 +105,7 @@ def generate_csv(params: CSVGeneratorParams):
                     required_rows_inserts[key] = required_rows_inserts[key].apply(lambda x: x + 1)
 
                 # one of the other columns, lets say the 'amount' column will have to be changed to simulate updates, keeping the candidate keys same
-                required_rows_updates['AMOUNT'] = required_rows_updates['AMOUNT'].apply(lambda x: x + 1)
+                required_rows_updates['TOTAL_AMOUNT'] = required_rows_updates['TOTAL_AMOUNT'].apply(lambda x: x + 1)
 
             global final_df
             if params.inserts == 0:
