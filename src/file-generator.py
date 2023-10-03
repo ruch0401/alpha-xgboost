@@ -182,10 +182,10 @@ def init_and_parse_config():
 
 def generate_source_dataframe(records):
     data = {
-        "PRODUCT_ID": [f'{get_random_number(1, 7)}' for i in range(0, records)],
-        "CHANNEL_ID": [f'{get_random_number(1, 7)}' for i in range(0, records)],
-        "MARKET_ID": [f'{i}' for i in range(0, records)],
-        "CUSTOMER_ID": [f'{get_random_number(100, 100000)}' for i in range(0, records)],
+        "PRODUCT_ID": [get_random_number(1, 7) for i in range(0, records)],
+        "CHANNEL_ID": [get_random_number(1, 7) for i in range(0, records)],
+        "MARKET_ID": [i for i in range(0, records)],
+        "CUSTOMER_ID": [get_random_number(100, 100000) for i in range(0, records)],
         "NRX": [get_random_number(100, 1000) for i in range(0, records)],
         "TRX": [get_random_number(100, 1000) for i in range(0, records)],
         "FACTORED_NRX": [get_random_number(100, 1000) for i in range(0, records)],
