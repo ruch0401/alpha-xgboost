@@ -115,7 +115,18 @@ def generate_csv(params: CSVGeneratorParams):
             else:
                 final_df = pd.concat([required_rows_inserts, required_rows_updates], axis=0)
 
-            write_df_to_resources(final_df, f'{output_root}/{params.object_name}_{params.records_per_file}_{i}.csv')
+            suffix = get_suffix(i)
+            write_df_to_resources(final_df, f'{output_root}/{params.object_name}_{params.records_per_file}_{suffix}.csv')
+
+
+def get_suffix(i):
+    if i < 10:
+        suffix = f'00{i}'
+    elif 10 <= i < 100:
+        suffix = f'0{i}'
+    else:
+        suffix = f'{i}'
+    return suffix
 
 
 def generate_file_with_seed_data(df, external_ids, params):
@@ -131,7 +142,7 @@ def generate_file_with_seed_data(df, external_ids, params):
 
     if is_conditional_key_required():
         df = df.drop(external_id_col_name, axis=1)
-    write_df_to_resources(df, f'{output_root}/{params.object_name}_{params.records_per_file}_0.csv')
+    write_df_to_resources(df, f'{output_root}/{params.object_name}_{params.records_per_file}_000.csv')
 
 
 def is_internal_id_required():
