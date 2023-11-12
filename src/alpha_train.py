@@ -7,7 +7,8 @@ from config import *
 import alpha_data
 
 
-def train_model():
+def train_model(**kwargs):
+    print(f'train_model kwargs: {kwargs}')
     df = alpha_data.load_dataset_as_pandas_df()
     print(f'iris_dataset in alpha_train: {df}')
     x_train, x_test, y_train, y_test = alpha_data.get_train_test_split(df)
